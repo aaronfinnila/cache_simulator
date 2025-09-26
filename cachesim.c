@@ -1,12 +1,11 @@
 #include <stdio.h>
-
-#define BLOCKSIZE = 1
-#define DRAM_ADDRESS_WIDTH = 6
+#include <string.h>
+#include <math.h>
 
 int handlerequest_cache(char request[]);
 int handlerequest_dram(char request[]);
 int toDecimal(char hexaCharacters[]);
-char toBinary(int decimalCharacters);
+void toBinary(int decimalCharacters, char binaryArray[]);
 
 
 int main() {
@@ -16,72 +15,75 @@ int main() {
 
     int result = handlerequest_cache(cpurequest);
 
-/*     printf("\n\nCurrent status\n\n");
+    printf("\n\nCurrent status\n\n");
     printf("\nRegisters:\n\n");
     for (int i = 0; i < 8; i++) {
         printf("[%d] = %d\n", i, cpuregisters[i]);
     }
-    printf("\n\nCache:\n\n");
-    for (int i = 0; i < 16; i++) {
-        printf("[%d] = %d\n", i, cache[i]);
-    }
-    printf("\n\nDRAM:\n\n");
-    for (int i = 0; i < 8; i++) {
-        for (int j =0; j < 8; j++) {
-            printf("[%d][%d] = %d\n", i, j, dram[i][j]);
-        }
-    } */
 
     return 0;
 }
+
 
 int handlerequest_cache(char request[]) {
 
     int requestDecimal = toDecimal(request);
 
-    char requestBinary[] = toBinary(requestDecimal);
+    char binaryArray[9] = {0};
+
+    toBinary(requestDecimal, binaryArray);
 
     int cache[16] = {0};
 
-    int readwrite = requestBinary[0];
+    char readwrite = binaryArray[0];
 
-    if (readwrite == 0) {
+    if (readwrite == '0') {
 
         char indexChars[] = {0};
 
-        for (int i = 1; i < 7; i++) {
-            indexChars[i-1] = request[i];
+        for (int i = 1; i < 8; i++) {
+            indexChars[i-1] = binaryArray[i];
         }
 
-        if (cache[])
+        printf("\nindexChars: %s\n", indexChars);
 
     } else {
 
     }
 
+    printf("\n\nCache:\n\n");
+    for (int i = 0; i < 16; i++) {
+        printf("[%d] = %d\n", i, cache[i]);
+    }
 }
 
 int handlerequest_dram(char request[]) {
 
     int dram[8][8] = {0};
+    
+    printf("\n\nDRAM:\n\n");
+    for (int i = 0; i < 8; i++) {
+        for (int j =0; j < 8; j++) {
+            printf("[%d][%d] = %d\n", i, j, dram[i][j]);
+        }
+    }
 
 }
 
-char toBinary(int decimalCharacters) {
+void toBinary(int decimalCharacters, char binaryArray[]) {
 
-    char binaryCharacters[9] = {0};
-
-    binaryCharacters[8] = '\0';
+    binaryArray[8] = '\0';
 
     for (int i = 7; i >= 0; i--) {
-        binaryCharacters[i] = (decimalCharacters & 1) ? 1 : 0;
+        binaryArray[i] = (decimalCharacters & 1) ? '1' : '0';
         decimalCharacters >>= 1;
     }
     
-    return binaryCharacters;
+    printf("\nbinaryChars: %s\n", binaryArray);
 }
 
 int toDecimal(char hexaCharacters[]) {
+
     int counter = 0;
     for (int i = 0; i < strlen(hexaCharacters); i++) {
         int len = strlen(hexaCharacters);
