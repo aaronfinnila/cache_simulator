@@ -1,25 +1,30 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <stdbool.h>
 
-int handlerequest_cache(char request[]);
-int handlerequest_dram(char request[]);
+int handlerequest_cache(char request[], int dataOut, int dataIn);
+int handlerequest_dram(char request[], int dataOut, int dataIn);
 int toDecimal(char characters[], int hexOrBin);
 void toBinary(int decimalCharacters, char binaryArray[]);
 
 
 int main() {
 
-    char cpurequest[] = "3F";
+    char cpurequest[] = "BF";
 
-    int result = handlerequest_cache(cpurequest);
+    int result = handlerequest_cache(cpurequest, 159, 0);
 
     printf("\nresult: %d\n", result);
     return 0;
 }
 
 
-int handlerequest_cache(char request[]) {
+int handlerequest_cache(char request[], int dataOut, int dataIn) {
+
+    int cache[16] = {0};
+    int tagStore[16] = {0};
+    bool inCache;
 
     // CONVERT HEX TO DECIMAL
 
@@ -31,58 +36,53 @@ int handlerequest_cache(char request[]) {
 
     toBinary(requestDecimal, binaryArray);
 
-    int cache[16] = {0};
-
-    int tagStore[16] = {0};
-
     // READ BINARY DATA
 
     char readwrite = binaryArray[0];
 
-    if (readwrite == '0') {
+    printf("\nreadwrite: %c", readwrite);
 
-        char indexChars[7] = {0};
+    char indexChars[7] = {0};
 
-        for (int i = 1; i < 8; i++) {
-            indexChars[i-1] = binaryArray[i];
-        }
+    for (int i = 1; i < 8; i++) {
+        indexChars[i-1] = binaryArray[i];
+    }
 
-        printf("\nindexChars: %s\n", indexChars);
+    int indexDecimal = toDecimal(indexChars, 1);
 
-        int indexDecimal = toDecimal(indexChars, 1);
+    int cacheIndex = indexDecimal % 16;
 
-        printf("\nindexDecimal: %d\n", indexDecimal);
-
-        int cacheIndex = indexDecimal % 16;
-
-        // IF IN CACHE, RETURN DATA. IF NOT, SEND REQUEST TO DRAM 
-
-        if (cache[cacheIndex] != 0) {
-            printf("\nCACHE READ HIT\n");
+    if (cache[cacheIndex] != 0) {
+        // READ AND HIT
+        if (readwrite == '0') {
+            printf("\n%d CACHE READ HIT\n", indexDecimal);
             return cache[cacheIndex];
+        // WRITE AND HIT
         } else {
-            printf("\nCACHE READ MISS\n");
-
-            int dramData = handlerequest_dram(binaryArray);
-            return dramData;
+            printf("\n%d CACHE WRITE HIT\n", indexDecimal);
+            handlerequest_dram(binaryArray, dataOut, dataIn);
         }
-
     } else {
-
+        // READ AND MISS
+        if (readwrite == '0') {
+            printf("\n%d CACHE READ MISS\n", indexDecimal);
+            int dramData = handlerequest_dram(binaryArray, dataOut, dataIn);
+            return dramData;
+        // WRITE AND MISS
+        } else {
+            printf("\n%d CACHE WRITE MISS\n", indexDecimal);
+            handlerequest_dram(binaryArray, dataOut, dataIn);
+        }
     }
-
-    printf("\n\nCache:\n\n");
-    for (int i = 0; i < 16; i++) {
-        printf("[%d] = %d\n", i, cache[i]);
-    }
+    return -1;
 }
 
-int handlerequest_dram(char request[]) {
-
-    // READ BINARY DATA
+int handlerequest_dram(char request[], int dataOut, int dataIn) {
 
     int dram[8][8] = {0};
     dram[7][7] = 210;
+
+    // READ BINARY DATA
 
     char readwrite = request[0];
 
@@ -92,23 +92,22 @@ int handlerequest_dram(char request[]) {
         indexChars[i-1] = request[i];
     }
 
+    printf("\nindexChars: %s\n", indexChars);
+
     int indexDecimal = toDecimal(indexChars, 1);
 
     int row = (int)(indexDecimal/8);
     int col = indexDecimal % 8;
 
+    int data = dram[row][col];
+    // READ
     if (readwrite == '0') {
-        int data = dram[row][col];
+        printf("\n%d DRAM READ\n", indexDecimal);
         return data;
+    // WRITE
     } else {
-
-    }
-    
-    printf("\n\nDRAM:\n\n");
-    for (int i = 0; i < 8; i++) {
-        for (int j =0; j < 8; j++) {
-            printf("[%d][%d] = %d\n", i, j, dram[i][j]);
-        }
+        printf("\n%d DRAM WRITE\n", indexDecimal);
+        dram[row][col] = dataOut;
     }
 
     return -1;
@@ -122,8 +121,6 @@ void toBinary(int decimalCharacters, char binaryArray[]) {
         binaryArray[i] = (decimalCharacters & 1) ? '1' : '0';
         decimalCharacters >>= 1;
     }
-    
-    printf("\nbinaryChars: %s\n", binaryArray);
 }
 
 int toDecimal(char characters[], int hexOrBin) {
@@ -153,7 +150,6 @@ int toDecimal(char characters[], int hexOrBin) {
         for (int i = 6; i >= 0; i--) {
             if (characters[i] == '1') {
                 decimal += (int)pow(2, count);
-                printf("\ndecimal: %d", decimal);
             }
             count++;
         }
