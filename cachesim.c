@@ -2,20 +2,63 @@
 #include <string.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 int handlerequest_cache(char request[], int dataOut, int dataIn);
 int handlerequest_dram(char request[], int dataOut, int dataIn);
 int toDecimal(char characters[], int hexOrBin);
 void toBinary(int decimalCharacters, char binaryArray[]);
+void printDram(int dram[8][8]);
+void printCache(int cache[16]);
 
 
 int main() {
+    int requests = 0;
+    char answer[20] = "";
 
-    char cpurequest[] = "BF";
+    while (requests <= 16) {
 
-    int result = handlerequest_cache(cpurequest, 159, 0);
+        // READ USER INPUT AND PASS IT TO THE CACHE
 
-    printf("\nresult: %d\n", result);
+        printf("\nGive hexadecimal number (for address + read/write) and Data_out and Data_in\nExample: 9B 100 0\n(Max 20 characters total, max hex value FF)\n");
+        fflush(stdout);
+        fgets(answer, sizeof(answer), stdin);
+        answer[strcspn(answer, "\n")] = '\0';
+
+        char cpurequest[3] = "";
+        cpurequest[0] = answer[0];
+        cpurequest[1] = answer[1];
+
+        int Data_out;
+        int Data_in;
+        bool dataOutProcessed = false;
+        char tempArray[9] = "";
+        int j = 0;
+
+        for (int i = 3; answer[i] != '\0'; i++) {
+            if (answer[i] != ' ') {
+                if (dataOutProcessed == false) {
+                tempArray[i-3] = answer[i];
+                } else {
+                    tempArray[j++] = answer[i];
+                }
+            } else {
+                Data_out = atoi(tempArray);
+                memset(tempArray, 0, sizeof(tempArray));
+                dataOutProcessed = true;
+            }
+        }
+
+        Data_in = atoi(tempArray);
+
+        printf("\ncpurequest: %s, Data_out: %d, Data_in: %d\n", cpurequest, Data_out, Data_in);
+
+        int result = handlerequest_cache(cpurequest, Data_out, Data_in);
+
+        printf("\nresult: %d\n", result);
+    }
+
+
     return 0;
 }
 
@@ -24,7 +67,6 @@ int handlerequest_cache(char request[], int dataOut, int dataIn) {
 
     int cache[16] = {0};
     int tagStore[16] = {0};
-    bool inCache;
 
     // CONVERT HEX TO DECIMAL
 
@@ -40,7 +82,7 @@ int handlerequest_cache(char request[], int dataOut, int dataIn) {
 
     char readwrite = binaryArray[0];
 
-    printf("\nreadwrite: %c", readwrite);
+/*     printf("\nreadwrite: %c", readwrite); */
 
     char indexChars[7] = {0};
 
@@ -56,6 +98,7 @@ int handlerequest_cache(char request[], int dataOut, int dataIn) {
         // READ AND HIT
         if (readwrite == '0') {
             printf("\n%d CACHE READ HIT\n", indexDecimal);
+            printCache(cache);
             return cache[cacheIndex];
         // WRITE AND HIT
         } else {
@@ -67,6 +110,7 @@ int handlerequest_cache(char request[], int dataOut, int dataIn) {
         if (readwrite == '0') {
             printf("\n%d CACHE READ MISS\n", indexDecimal);
             int dramData = handlerequest_dram(binaryArray, dataOut, dataIn);
+            printCache(cache);
             return dramData;
         // WRITE AND MISS
         } else {
@@ -74,13 +118,13 @@ int handlerequest_cache(char request[], int dataOut, int dataIn) {
             handlerequest_dram(binaryArray, dataOut, dataIn);
         }
     }
+    printCache(cache);
     return -1;
 }
 
 int handlerequest_dram(char request[], int dataOut, int dataIn) {
 
     int dram[8][8] = {0};
-    dram[7][7] = 210;
 
     // READ BINARY DATA
 
@@ -92,7 +136,7 @@ int handlerequest_dram(char request[], int dataOut, int dataIn) {
         indexChars[i-1] = request[i];
     }
 
-    printf("\nindexChars: %s\n", indexChars);
+/*     printf("\nindexChars: %s\n", indexChars); */
 
     int indexDecimal = toDecimal(indexChars, 1);
 
@@ -103,6 +147,7 @@ int handlerequest_dram(char request[], int dataOut, int dataIn) {
     // READ
     if (readwrite == '0') {
         printf("\n%d DRAM READ\n", indexDecimal);
+        printDram(dram);
         return data;
     // WRITE
     } else {
@@ -110,7 +155,27 @@ int handlerequest_dram(char request[], int dataOut, int dataIn) {
         dram[row][col] = dataOut;
     }
 
+
+    printDram(dram);
     return -1;
+}
+
+void printDram(int dram[8][8]) {
+
+    printf("\nDRAM STATUS:\n\n");
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            printf("[%d][%d]: %d\n", i, j, dram[i][j]);
+        }
+    }
+}
+
+void printCache(int cache[16]) {
+
+    printf("\nCACHE STATUS: \n\n");
+    for (int i = 0; i < 16; i++) {
+        printf("[%d]: %d\n", i, cache[i]);
+    }
 }
 
 void toBinary(int decimalCharacters, char binaryArray[]) {
